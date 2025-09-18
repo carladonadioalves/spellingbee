@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Spelling Trainer</title>
+  <style>
+    #bigLetter {
+      font-size: 100px;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 50px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    #wordList {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none; /* escondida por padrão */
+    }
+  </style>
+</head>
+<body>
+  <h1>English Spelling Trainer</h1>
+  <button id="startBtn">Start</button>
+  <button id="repeatBtn" disabled>Repeat Word</button>
+  <button id="showListBtn">Show List</button>
+  <p id="status"></p>
+  <p id="feedback"></p>
+  <p id="score"></p>
+  <div id="bigLetter"></div>
+  <div id="wordList"></div>
+
+  <script>
+    // Lista fixa
+    let words = ["apple", "banana", "orange", "grape", "strawberry", "melon"];
+
+    let currentIndex = 0;
+    let recognition;
+    let correctCount = 0;
+
+    const letterMap = {
+      "a": "A", "b": "B", "c": "C", "d": "D", "e": "E",
+      "f": "F", "g": "G", "h": "H", "i": "I", "j": "J",
+      "k": "K", "l": "L", "m": "M", "n": "N", "o": "O",
+      "p": "P", "q": "Q", "r": "R", "s": "S", "t": "T",
+      "u": "U", "v": "V", "w": "W", "x": "X", "y": "Y", "z": "Z"
+    };
+
+    const bigLetterDiv = document.getElementById("bigLetter");
+    const wordListDiv = document.getElementById("wordList");
+
+    // Inicializa a lista mas esconde até o usuário clicar em "Show List"
+    function updateWordList() {
+      wordListDiv.innerHTML = "<strong>Word List:</strong><br>" + words.map((w, i) =>
+        (i === currentIndex ? `<b style="color:blue">${w}</b>` : w)
+      ).join("<br>");
+    }
+
+    function speakWord(word) {
+      const utter = new SpeechSynthesisUtterance(word);
+      utter.lang = "en-US";
+      speechSynthesis.speak(utter);
+    }
+
+    function showBigLetter(letter) {
+      bigLetterDiv.innerText = letter;
+      bigLetterDiv.style.opacity = 1;
+      setTimeout(() => {
+        bigLetterDiv.style.opacity = 0;
+      }, 1000);
+    }
+
+    function initRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.continuous = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = (event) => {
+        let userInput = event.results[0][0].transcript.toLowerCase().split(/\s+/);
+        let spelledLetters = userInput.map(l => letterMap[l] || "?");
+
+        spelledLetters.forEach((letter, i) => {
+          setTimeout(() => showBigLetter(letter), i * 1200);
+        });
+
+        let spelled = spelledLetters.join("");
+        const correctWord = words[currentIndex].toUpperCase();
+
+        setTimeout(() => {
+          if (spelled === correctWord) {
+            document.getElementById("feedback").innerText = `✅ Correct! (${spelled})`;
+            correctCount++;
+            currentIndex++;
+          } else {
+            document.getElementById("feedback").innerText = `❌ Result: ${spelled} | Correct: ${correctWord}`;
+          }
+
+          updateWordList();
+
+          if (currentIndex < words.length) {
+            setTimeout(playRound, 3000);
+          } else if (spelled === correctWord) {
+            document.getElementById("status").innerText = "🎉 End of list!";
+            const percent = ((correctCount / words.length) * 100).toFixed(1);
+            document.getElementById("score").innerText = `Final Score: ${correctCount} / ${words.length} (${percent}%)`;
+          }
+        }, spelledLetters.length * 1200 + 500);
+      };
+
+      recognition.onerror = (event) => {
+        document.getElementById("feedback").innerText = "Error: " + event.error;
+      };
+    }
+
+    function playRound() {
+      const word = words[currentIndex];
+      document.getElementById("status").innerText = `Word ${currentIndex + 1} of ${words.length}`;
+      document.getElementById("feedback").innerText = "";
+      bigLetterDiv.innerText = "";
+      updateWordList();
+      speakWord(word);
+      recognition.start();
+    }
+
+    function startTraining() {
+      // Esconde a lista ao iniciar
+      wordListDiv.style.display = "none";
+
+      currentIndex = 0;
+      correctCount = 0;
+      document.getElementById("score").innerText = "";
+      initRecognition();
+      playRound();
+      document.getElementById("repeatBtn").disabled = false;
+    }
+
+    function repeatWord() {
+      if (words.length > 0 && currentIndex < words.length) {
+        document.getElementById("feedback").innerText = "🔁 Repeating word...";
+        bigLetterDiv.innerText = "";
+        speakWord(words[currentIndex]);
+        recognition.start();
+      }
+    }
+
+    function toggleWordList() {
+      if (wordListDiv.style.display === "none") {
+        wordListDiv.style.display = "block";
+        updateWordList();
+      } else {
+        wordListDiv.style.display = "none";
+      }
+    }
+
+    document.getElementById("startBtn").addEventListener("click", startTraining);
+    document.getElementById("repeatBtn").addEventListener("click", repeatWord);
+    document.getElementById("showListBtn").addEventListener("click", toggleWordList);
+
+    // Inicializa lista (escondida)
+    updateWordList();
+  </script>
+</body>
+</html>
