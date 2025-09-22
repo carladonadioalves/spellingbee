@@ -3,8 +3,9 @@ let currentIndex = 0;
 let recognition;
 let correctCount = 0;
 let timerInterval;
-let timeLeft = 30;
+let timeLeft = 20;
 let isRunning = false;
+let retryMode = false; // flag para saber se estamos perguntando Yes/No
 
 const letterMap = {
   "a": "A", "b": "B", "c": "C", "d": "D", "e": "E",
@@ -17,9 +18,139 @@ const letterMap = {
 // 🔹 Carregar lista do arquivo listapalavras.txt
 async function loadWords() {
   try {
-    const response = await fetch("listapalavras.txt");
-    const text = await response.text();
-    words = text.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+     words = [
+				  "EACH",
+				  "CHANGE",
+				  "MARKET",
+				  "WINGS",
+				  "SNACK",
+				  "HEALED",
+				  "DRIVE",
+				  "BACKYARD",
+				  "CLASSROOM",
+				  "VEGETABLES",
+				  "STRONG",
+				  "COUNTRYSIDE",
+				  "WEATHER",
+				  "NEIGHBOR",
+				  "NOISY",
+				  "BEETLE",
+				  "CHOICES",
+				  "LOWERED",
+				  "SILLY",
+				  "BRIGHT",
+				  "RAISE",
+				  "AMAZING",
+				  "BOWL",
+				  "DAUGHTER",
+				  "DETAIL",
+				  "HANDSOME",
+				  "SPOON",
+				  "CRYING",
+				  "WEARING",
+				  "SHEEPFOLD",
+				  "ONLY",
+				  "BUILDING",
+				  "SOMETIMES",
+				  "DRAGONFLY",
+				  "EXCITING",
+				  "PANCAKES",
+				  "ANSWERED",
+				  "ESPECIALLY",
+				  "HOLE",
+				  "KITCHEN",
+				  "WHATEVER",
+				  "STALLS",
+				  "BETHLEHEM",
+				  "HONEY",
+				  "USUALLY",
+				  "SEEDS",
+				  "YOUNGEST",
+				  "RADISH",
+				  "GRASSHOPPER",
+				  "HIGHLIGHTED",
+				  "SKUNK",
+				  "BEETROOT",
+				  "ICELAND",
+				  "EYEBROW",
+				  "WOOL",
+				  "LETTUCE",
+				  "BUTTERFLY",
+				  "STICKERS",
+				  "KITTENS",
+				  "HUNGRY",
+				  "THURSDAY",
+				  "ZACCHAEUS",
+				  "OATMEAL",
+				  "LEAVES",
+				  "BLUEBERRY",
+				  "FORGIVENESS",
+				  "SEASONED",
+				  "COCKROACH",
+				  "STRAWBERRY",
+				  "GEOGRAPHY",
+				  "PRECIOUS",
+				  "BREAD",
+				  "SPOTTED",
+				  "QUICKLY",
+				  "CHARACTER",
+				  "PURR",
+				  "JOYFUL",
+				  "DISHONEST",
+				  "RELEASING",
+				  "AWFUL",
+				  "ITCH",
+				  "UNHAPPY",
+				  "IMMEDIATELY",
+				  "WOLF",
+				  "POLLINATORS",
+				  "WRIST",
+				  "SYNONYMS",
+				  "TRICK",
+				  "BITE",
+				  "BATTLE",
+				  "EVERYTHING",
+				  "BELIEVE",
+				  "FIREFLY",
+				  "CUCKOO",
+				  "PAINTBRUSH",
+				  "VILLAGERS",
+				  "GLASS",
+				  "EARLY",
+				  "BRIGHTEST",
+				  "TRUTH",
+				  "SECRET",
+				  "HUSBAND",
+				  "HIBERNATE",
+				  "REASON",
+				  "BIRTHDAY",
+				  "HUGE",
+				  "NIGHT",
+				  "MIDNIGHT",
+				  "WEDNESDAY",
+				  "FAIR",
+				  "LIGHT",
+				  "GLOW",
+				  "THORAX",
+				  "BREAKFAST",
+				  "FIRST",
+				  "YAWN",
+				  "FABLE",
+				  "SHINE",
+				  "CATERPILLAR",
+				  "LAZY",
+				  "AWESOME",
+				  "FUNNY",
+				  "FLEA",
+				  "SCARY",
+				  "SMILED",
+				  "PARALYZED",
+				  "SHY",
+				  "SHOWER",
+				  "RACE",
+				  "CREEPY",
+				  "CANDY BLOSSOM"
+				];
     document.getElementById("startBtn").disabled = false;
     console.log("Words loaded:", words);
   } catch (err) {
@@ -41,14 +172,28 @@ function initRecognition() {
   recognition = new SpeechRecognition();
   recognition.lang = "en-US";
   recognition.interimResults = false;
-  recognition.continuous = false;
+  recognition.continuous = true; // ⚡ mantém microfone ligado
   recognition.maxAlternatives = 1;
 
   recognition.onresult = (event) => {
     if (!isRunning) return;
-    let userInput = event.results[0][0].transcript.toLowerCase().split(/\s+/);
-    let spelled = userInput.map(l => letterMap[l] || "").join("");
+    let transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
 
+    if (retryMode) {
+      // Estamos esperando Yes/No
+      if (transcript.includes("yes")) {
+        document.getElementById("feedback").innerText = "🔁 Try again!";
+        retryMode = false;
+        playRound(); // repete a mesma palavra
+      } else if (transcript.includes("no")) {
+        retryMode = false;
+        nextWord();
+      }
+      return; // sai sem avaliar como soletração
+    }
+
+    // Normal: soletrar letra por letra
+    let spelled = transcript.split(/\s+/).map(l => letterMap[l] || "").join("");
     const correctWord = words[currentIndex].toUpperCase();
 
     if (spelled === correctWord) {
@@ -56,20 +201,10 @@ function initRecognition() {
       correctCount++;
       nextWord();
     } else {
-      document.getElementById("feedback").innerText = `❌ You said: ${spelled} | Correct: ${correctWord}`;
-      // 🔹 perguntar se quer repetir
-      setTimeout(() => {
-        let retry = confirm(`Você errou a palavra "${correctWord}".\nQuer tentar novamente?`);
-        if (retry) {
-          // repete a mesma palavra
-          speakWord(correctWord);
-          startTimer();
-          recognition.start();
-        } else {
-          // segue para a próxima
-          nextWord();
-        }
-      }, 500);
+      // ❌ Errou → ativar modo retry
+      document.getElementById("feedback").innerText =
+        `❌ You said: ${spelled}\n👉 Try again? (Say: Yes / No)`;
+      retryMode = true; // ativa modo de resposta Yes/No
     }
   };
 
@@ -78,6 +213,16 @@ function initRecognition() {
     document.getElementById("feedback").innerText = "Error: " + event.error;
     nextWord();
   };
+}
+
+function safeStopRecognition() {
+  if (recognition) {
+    try {
+      recognition.stop();
+    } catch (e) {
+      console.warn("Recognition já parado:", e);
+    }
+  }
 }
 
 // Rodada
@@ -101,7 +246,7 @@ function playRound() {
 // Timer
 function startTimer() {
   clearInterval(timerInterval);
-  timeLeft = 30;
+  timeLeft = 20;
   document.getElementById("timer").innerText = `Time left: ${timeLeft}s`;
 
   timerInterval = setInterval(() => {
@@ -110,31 +255,30 @@ function startTimer() {
       return;
     }
 
-    timeLeft--;
-    document.getElementById("timer").innerText = `Time left: ${timeLeft}s`;
-
-    if (timeLeft <= 0) {
+    if (--timeLeft <= 0) {
       clearInterval(timerInterval);
       document.getElementById("feedback").innerText = "⏰ Time up!";
-      recognition.stop();
+      safeStopRecognition();
       nextWord();
+    } else {
+      document.getElementById("timer").innerText = `Time left: ${timeLeft}s`;
     }
-  }, 1000);
+  }, 2000);
 }
 
 // Próxima palavra
 function nextWord() {
   clearInterval(timerInterval);
-  recognition.stop();
+  safeStopRecognition();
   currentIndex++;
-  setTimeout(playRound, 1500);
+  setTimeout(playRound, 2000);
 }
 
 // Fim normal
 function endTraining() {
   isRunning = false;
   clearInterval(timerInterval);
-  recognition.stop();
+  safeStopRecognition();
   document.getElementById("status").innerText = "🎉 End of list!";
   showScore();
 
@@ -171,7 +315,7 @@ function startTraining() {
 function stopTraining() {
   isRunning = false;
   clearInterval(timerInterval);
-  recognition.stop();
+  safeStopRecognition();
   document.getElementById("status").innerText = "⏹ Training stopped!";
   showScore();
 

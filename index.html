@@ -12,25 +12,21 @@
       cursor: pointer;
     }
 
-    /* opcional: cores diferentes */
     #startBtn {
       background-color: #4CAF50;
       color: white;
       font-weight: bold;
     }
-
     #stopBtn {
       background-color: #f44336;
       color: white;
       font-weight: bold;
     }
-
     #showListBtn {
       background-color: #008CBA;
       color: white;
       font-weight: bold;
     }
-    
     #bigLetter {
       font-size: 100px;
       font-weight: bold;
@@ -45,10 +41,10 @@
       padding: 10px;
       border: 1px solid #ccc;
       width: 300px;
-      height: 150px;
+      height: 300px;
       overflow-y: scroll;
       background: #f9f9f9;
-      font-family: monospace;
+      font-family: bold;
       white-space: pre-wrap;
     }
     #timer {
@@ -60,19 +56,19 @@
   </style>
 </head>
 <body>
-  <h1>Spelling Trainer</h1>
+  <h1>English Spelling Trainer</h1>
 
   <button id="startBtn">▶ Start</button>
   <button id="stopBtn" disabled>⏹ Stop</button>
   <button id="showListBtn">📖 Show/Hide List</button>
 
-  <p id="status">Press "Start" to begin</p>
+  <p id="status"></p>
   <p id="timer"></p>
-  <p id="currentWord"></p>
-  <p id="letterDisplay"></p>
+  <div id="bigLetter"></div>
+  <p id="feedback"></p>
   <p id="score"></p>
 
-  <!-- Lista fica por último -->
+   <!-- Lista fica por último -->
   <div id="wordList" style="display:none;">
     <h2>Lista de Palavras</h2>
     <div style="
@@ -88,8 +84,10 @@
     </div>
   </div>
 
-  <img id="celebrateGif" src="celebration.gif" style="display:none; width:350px; margin-top:20px;" />
-  
+  <!-- GIF de celebração -->
+  <img id="celebrateGif" src="celebration.gif" style="display:none; width:300px; margin-top:20px;" />
+
+  <!-- Arquivo JavaScript separado -->
   <script src="script.js"></script>
 </body>
 </html>
